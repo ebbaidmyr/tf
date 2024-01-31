@@ -25,6 +25,8 @@ post('/login') do
   
   if BCrypt::Password.new(pwdigest) == password
     session[:id] = id
+    session[:username] = username
+    p session[:id]
     redirect('/filly')
   else
     "FEL LÖSEN!"
@@ -35,7 +37,7 @@ get('/filly') do
   id = session[:id].to_i
   db = SQLite3::Database.new('db/filly.db')
   db.results_as_hash = true
-  result = db.execute("SELECT * FROM filly WHERE user_id = ?",id)
+  result = db.execute("SELECT * FROM users WHERE id = ?",id)
   p "Alla filmer/serier från result #{result}"
   slim(:"filly/index",locals:{filly:result})
 end
