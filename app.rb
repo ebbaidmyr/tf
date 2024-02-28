@@ -56,3 +56,15 @@ post('/users/new') do
     "Lösenorden matchade inte"
   end
 end
+
+get('/filly/new') do
+  slim(:"filly/new")
+end
+
+post ('/filly/new') do
+  title = params[:title]
+  name = params[:name].to_i
+  db = SQLite3::Database.new("db/filly.db")
+  db.execute("INSERT INTO movies (name, id) VALUES (?, ?)", title, name)
+  redirect ('/filly/new')
+end
