@@ -1,4 +1,8 @@
 h2 Se alla dina sparade filmer och serier #{session[:username]}!
 
-- filly.each do |filly|
-    p = filly["content"]
+- filly.each do |movie|
+    p  ________________________________
+    p Name: #{movie["name"]}
+    p Director: #{movie["director"]}
+    form action="/filly/#{movie['id']}/delete" method="post" 
+        input type="submit" value="Delete"/
