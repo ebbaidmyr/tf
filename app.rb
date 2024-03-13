@@ -33,6 +33,20 @@ post('/login') do
   end
 end
 
+get('/admin') do
+  slim(:admin)
+end
+
+post('/genre/new') do
+    genre = params[:genre]
+    db = SQLite3::Database.new('db/filly.db')
+    db.results_as_hash = true
+
+    db.execute("INSERT INTO genre (name) VALUES (?)", genre)
+    redirect('/admin')
+
+end
+
 get('/filly') do
   id = session[:id].to_i
   db = SQLite3::Database.new('db/filly.db')
@@ -58,40 +72,25 @@ post('/users/new') do
 end
 
 get('/filly/new') do
-  slim(:"filly/new")
+  db = SQLite3::Database.new('db/filly.db')
+  db.results_as_hash = true
+  genres = db.execute("SELECT * FROM genre")
+
+  slim(:"filly/new", locals: { genres: genres })
 end
 
-post ('/filly/new') do
+post('/filly/new') do
   title = params[:title]
   director = params[:director]
+  genre = params[:genre]
   db = SQLite3::Database.new("db/filly.db")
   db.execute("INSERT INTO movies (name, director, user_id) VALUES (?, ?, ?)", title, director, session[:id])
-  redirect ('/filly/new')
-end
-
-post('/filly/:id/delete') do
-  id = params[:id].to_i
-  db = SQLite3::Database.new("db/filly.db")
-  db.execute("DELETE FROM movies WHERE id = ?", id)
-  redirect('/filly')
-end
-
-post('/filly/:id/update') do
-  id = params[:id].to_i
-  title = params[:title]
-  artist_id = params[:directorid].to_i
-  db = SQLite3::Database.new("db/filly.db")
-  db.execute("UPDATE movies SET Title=?,directorid=? WHERE id = ?",title,directorid,id)
-  redirect('/filly')
-end
-
-get('/filly/:id/edit') do
-  id = params[:id].to_i
-  db = SQLite3::Database.new("db/filly.db")
-  db.results_as_hash = true
-  result = db.execute("SELECT * FROM movies WHERE id = ?", id).first
-  p "result är #{result}"
-  slim(:"/filly/edit", locals:{result:result})
+  movies_id = db.last_insert_row_id
+  genre_id = db.execute("SELECT id FROM genre WHERE name = ?", genre).first[0]
+  p movies_id
+  p genre_id
+  db.execute("INSERT INTO genre_movies_rel (genre_id, movie_id) VALUES (?, ?)", movies_id, genre_id)
+  redirect('/filly/new')
 end
 
 post '/filly/:movies/delete' do
@@ -99,4 +98,26 @@ post '/filly/:movies/delete' do
   db = SQLite3::Database.new('db/filly.db')
   db.execute("DELETE FROM movies WHERE id=?", id)
   redirect('/filly')
+end
+
+post('/filly/:movies/update') do
+  id = params[:movies].to_i
+  title = params[:title]
+  director = params[:director]
+  genre = params[:genre]
+  db = SQLite3::Database.new("db/filly.db")
+  db.execute("UPDATE movies SET name=?, director=?, genre=? WHERE id = ?", title, director, genre, id)
+  redirect('/filly')
+end
+
+get('/filly/:movies/edit') do
+  id = params[:movies].to_i
+  db = SQLite3::Database.new("db/filly.db")
+  db.results_as_hash = true
+
+  genres = db.execute("SELECT * FROM genre")
+
+  result = db.execute("SELECT * FROM movies WHERE id = ?", id).first
+  p "result är #{result}"
+  slim(:"/filly/edit", locals: { result: result, genres: genres })
 end

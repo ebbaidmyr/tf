@@ -10,11 +10,12 @@ html lang="en"
     nav
       a href="/" Register
       a href="/showlogin" Login
-
+      - if(session[:username] == "admin")
+          a href="/admin" ADMIN
 
     nav
       a href="/" Start
       a href="/filly" Visa alla filmer och serier
-      a href= "/filly/new" Lägg till nya filmer och serier
+      a href="/filly/new" Lägg till nya filmer och serier
 
     == yield
