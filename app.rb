@@ -6,6 +6,36 @@ require 'bcrypt'
 
 enable :sessions
 
+before do 
+  if !['/', '/showlogin', '/login', '/wrong_password', '/wrong_username'].include?(request.path_info) && session[:id].nil?
+      redirect('/showlogin')
+  end
+
+  if request.path_info == '/admin' && session[:username] != 'admin'
+      redirect('/filly')
+  end
+end
+
+total_attempts = 3
+first_cooldown = 2
+max_cooldown = 500
+
+before '/login' do
+  session[:attempts] ||=0
+  if session[:attempts] >= total_attempts
+    cooldown = [first_cooldown * (2 ** (session[:attempts] - total_attempts)), max_cooldown].min
+    if Time.now - (session[:last_attempt_time] || Time.now) < cooldown 
+      halt 429, "För många försök, snela vänta #{cooldown - (Time.now - session[:last_attempt_time]).to_i} sekunder."
+    end
+  end
+end
+
+def connect_to_db()
+  db = SQLite3::Database.new('db/filly.db')
+  db.results_as_hash = true
+  return db
+end
+
 get('/') do
   slim(:register)
 end
@@ -25,8 +55,7 @@ end
 post('/login') do
   username = params[:username]
   password = params[:password]
-  db = SQLite3::Database.new('db/filly.db')
-  db.results_as_hash = true
+  db = connect_to_db()
   result = db.execute("SELECT * FROM users WHERE username = ?",username).first
   if result == nil
     redirect('/wrong_username')
@@ -40,6 +69,8 @@ post('/login') do
     p session[:id]
     redirect('/filly')
   else
+    session[:last_attempt_time] = Time.now
+    session[:attempts] += 1
     redirect('/wrong_password')
   end
 end
@@ -50,8 +81,7 @@ end
 
 post('/genre/new') do
     genre = params[:genre]
-    db = SQLite3::Database.new('db/filly.db')
-    db.results_as_hash = true
+    db = connect_to_db()
 
     db.execute("INSERT INTO genre (name) VALUES (?)", genre)
     redirect('/admin')
@@ -60,15 +90,13 @@ end
 
 get('/filly') do
   id = session[:id].to_i
-  db = SQLite3::Database.new('db/filly.db')
-  db.results_as_hash = true
+  db = connect_to_db()
   result = db.execute("SELECT movies.*, GROUP_CONCAT(genre.name, ', ') AS genre_names 
                       FROM movies 
                       LEFT JOIN genre_movies_rel ON movies.id = genre_movies_rel.movie_id 
                       LEFT JOIN genre ON genre_movies_rel.genre_id = genre.id 
                       WHERE movies.user_id = ? 
                       GROUP BY movies.id", id)
-  
   
   p "Alla filmer/serier från result #{result}"
   slim(:"filly/index", locals: { filly: result })
@@ -81,7 +109,7 @@ post('/users/new') do
 
   if password == password_confirm
     password_digest = BCrypt::Password.create(password)
-    db = SQLite3::Database.new('db/filly.db')
+    db = connect_to_db()
     db.execute('INSERT INTO users (username,pwdigest) VALUES (?,?)',username,password_digest)
     redirect('/')
   else
@@ -90,8 +118,7 @@ post('/users/new') do
 end
 
 get('/filly/new') do
-  db = SQLite3::Database.new('db/filly.db')
-  db.results_as_hash = true
+  db = connect_to_db()
   genres = db.execute("SELECT * FROM genre")
 
   slim(:"filly/new", locals: { genres: genres })
@@ -102,7 +129,7 @@ post('/filly/new') do
   director = params[:director]
   genre = params[:genre]
   rating = params[:rating]
-  db = SQLite3::Database.new("db/filly.db")
+  db = connect_to_db()
   db.execute("INSERT INTO movies (name, director, user_id, rating) VALUES (?, ?, ?, ?)", title, director, session[:id], rating)
   movies_id = db.last_insert_row_id
   genre_id = db.execute("SELECT id FROM genre WHERE name = ?", genre).first[0]
@@ -113,10 +140,13 @@ post('/filly/new') do
 end
 
 post '/filly/:movies/delete' do
-  id = params[:movies].to_i
-  db = SQLite3::Database.new('db/filly.db')
-  db.execute("DELETE FROM movies WHERE id=?", id)
-  db.execute("DELETE FROM genre_movies_rel WHERE movie_id=?", id)
+  movie_id = params[:movies]
+  db = connect_to_db()
+  movie_user_id = db.execute("SELECT user_id FROM movies WHERE id = ?", movie_id).first
+  if movie_user_id["user_id"] == session[:id]
+    db.execute("DELETE FROM movies WHERE id=?", movie_id)
+    db.execute("DELETE FROM genre_movies_rel WHERE movie_id=?", movie_id)
+  end
   redirect('/filly')
 end
 
@@ -127,30 +157,33 @@ post('/filly/:movies/update') do
   genre = params[:genre]
   rating = params[:rating]
 
-  db = SQLite3::Database.new("db/filly.db")
-  db.execute("UPDATE movies SET name=?, director=?, rating=? WHERE id = ?", title, director, rating, id)
-
-  genre_id = db.execute("SELECT id FROM genre WHERE name = ?", genre).first&.first
-  if genre_id
-    db.execute("INSERT INTO genre_movies_rel (genre_id, movie_id) VALUES (?, ?)", genre_id, id)
+  db = connect_to_db()
+  movie_user_id = db.execute("SELECT user_id FROM movies WHERE id = ?", id).first
+  p "MOVE USER ID"
+  p movie_user_id
+  p session[:id]
+  if movie_user_id["user_id"].to_i == session[:id].to_i
+    db.execute("UPDATE movies SET name=?, director=?, rating=? WHERE id = ?", title, director, rating, id)
+    genre_id = db.execute("SELECT id FROM genre WHERE name = ?", genre).first
+    p "GENRE"
+    p genre_id
+    if genre_id
+      db.execute("INSERT INTO genre_movies_rel (genre_id, movie_id) VALUES (?, ?)", genre_id["id"], id)
+    end
+  else 
+    p "WRON"
   end
+
   redirect('/filly')
 end
 
 get('/filly/:movies/edit') do
   id = params[:movies].to_i
-  db = SQLite3::Database.new("db/filly.db")
-  db.results_as_hash = true
+  db = connect_to_db()
 
   genres = db.execute("SELECT * FROM genre")
 
   result = db.execute("SELECT * FROM movies WHERE id = ?", id).first
   p "result är #{result}"
   slim(:"/filly/edit", locals: { result: result, genres: genres })
-end
-
-get('/cooldown') do
-  session[:cooldown] = true
-  session[:time1] = Time.now
-  slim(:"filly/cooldown")
 end
