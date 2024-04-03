@@ -5,8 +5,14 @@ form action="/filly/new" method="post"
     select name="genre" id="genre"
         - genres.each do |genre|
             option value="#{genre['name']}" = genre["name"] 
+    label for="type" Type
+    select name="type" id="type"
+        option value="Completed" Completed
+        option value="Watchlist" Watchlist
+        option value="Dropped" Dropped
     label for="rating" Rating
     select name="rating" id="rating"
+        option value="no rating yet" no rating yet
         option value="1" 1 
         option value="2" 2
         option value="3" 3

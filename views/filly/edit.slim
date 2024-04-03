@@ -1,10 +1,18 @@
 form action="/filly/#{result['id']}/update" method="post"
   input type="text" name="title" value="#{result['name']}"
   input type="text" name="director" value="#{result['director']}"
-    select name="genre"
+    label for="genre" Genre
+    select name="genre" id="genre"
         - genres.each do |genre|
             option value="#{genre['name']}" = genre["name"]
-    select name="rating" 
+    label for="type" Type
+    select name="type" id="type"
+      option value="Completed" Completed 
+      option value="Watchlist" Watchlist
+      option value="Dropped" Dropped
+    label for="rating" Rate
+    select name="rating" id="rating"
+      option value="no rating yet" no rating yet
       option value="1" 1 
       option value="2" 2
       option value="3" 3

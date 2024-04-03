@@ -128,9 +128,10 @@ post('/filly/new') do
   title = params[:title]
   director = params[:director]
   genre = params[:genre]
+  type = params[:type]
   rating = params[:rating]
   db = connect_to_db()
-  db.execute("INSERT INTO movies (name, director, user_id, rating) VALUES (?, ?, ?, ?)", title, director, session[:id], rating)
+  db.execute("INSERT INTO movies (name, director, user_id, type, rating) VALUES (?, ?, ?, ?, ?)", title, director, session[:id], type, rating)
   movies_id = db.last_insert_row_id
   genre_id = db.execute("SELECT id FROM genre WHERE name = ?", genre).first[0]
   p movies_id
@@ -155,25 +156,20 @@ post('/filly/:movies/update') do
   title = params[:title]
   director = params[:director]
   genre = params[:genre]
+  type = params[:type]
   rating = params[:rating]
 
   db = connect_to_db()
   movie_user_id = db.execute("SELECT user_id FROM movies WHERE id = ?", id).first
-  p "MOVE USER ID"
-  p movie_user_id
-  p session[:id]
   if movie_user_id["user_id"].to_i == session[:id].to_i
-    db.execute("UPDATE movies SET name=?, director=?, rating=? WHERE id = ?", title, director, rating, id)
+    db.execute("UPDATE movies SET name=?, director=?, type=?, rating=? WHERE id = ?", title, director, type, rating, id)
     genre_id = db.execute("SELECT id FROM genre WHERE name = ?", genre).first
-    p "GENRE"
-    p genre_id
     if genre_id
       db.execute("INSERT INTO genre_movies_rel (genre_id, movie_id) VALUES (?, ?)", genre_id["id"], id)
     end
   else 
-    p "WRON"
+    p "WRONG"
   end
-
   redirect('/filly')
 end
 
@@ -184,6 +180,5 @@ get('/filly/:movies/edit') do
   genres = db.execute("SELECT * FROM genre")
 
   result = db.execute("SELECT * FROM movies WHERE id = ?", id).first
-  p "result är #{result}"
   slim(:"/filly/edit", locals: { result: result, genres: genres })
 end

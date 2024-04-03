@@ -5,6 +5,7 @@ h2 Se alla dina sparade filmer och serier #{session[:username]}!
     p Name: #{movie["name"]}
     p Director: #{movie["director"]}
     p Genre: #{movie["genre_names"]}
+    p Type: #{movie["type"]}
     p Rating: #{movie["rating"]}
     form action="/filly/#{movie['id']}/delete" method="post" 
         input type="submit" value="Delete"/
