@@ -9,6 +9,7 @@ enable :sessions
 
 include Model
 
+# Redirects to login page if not logged in, and restricts access to admin page
 before do 
   if !['/', '/showlogin', '/login', '/wrong_password', '/wrong_username'].include?(request.path_info) && session[:id].nil?
       redirect('/showlogin')
@@ -19,10 +20,12 @@ before do
   end
 end
 
+# Limits login attempts and implements cooldown
 total_attempts = 3
 first_cooldown = 2
 max_cooldown = 500
 
+# Secure the user being hacked by a exponential cooldown function
 before '/login' do
   session[:attempts] ||=0
   if session[:attempts] >= total_attempts
@@ -33,22 +36,30 @@ before '/login' do
   end
 end
 
+# Displays a register form
 get('/') do
   slim(:register)
 end
 
+# Displays a login form
 get('/showlogin') do
   slim(:login)
 end
 
+# Route for displaying wrong password page, displays an error message
 get('/wrong_password') do
   slim(:wrong_password)
 end
 
+# Route for displaying wrong username page, displays an error message
 get('/wrong_username') do
   slim(:wrong_username)
 end
 
+# Login route, authenticates user, else redirects user to landing page
+#
+# @param [String] username, The username entered by the user
+# @param [String] password, The password entered by the user
 post('/login') do
   username = params[:username]
   password = params[:password]
@@ -74,10 +85,14 @@ post('/login') do
   end
 end
 
+# Route for admin page
 get('/admin') do
   slim(:admin)
 end
 
+# Route for creating new genre, if admin redirects to admin page, else redirects to /showlogin
+#
+# @param [String] genre, The new name of the genre
 post('/genre/new') do
     if authenticate_admin(session[:username])
       genre = params[:genre]
@@ -87,6 +102,7 @@ post('/genre/new') do
     redirect('/showlogin')
 end
 
+# Route for displaying user's movies
 get('/filly') do
   id = session[:id].to_i
   result = get_movies(id)
@@ -95,14 +111,21 @@ get('/filly') do
   slim(:"filly/index", locals: { filly: result })
 end
 
+# Displays various error messages
 get('/same') do
   slim(:same)
 end
 
+# Displays that when creating a movie something was not filled in
 get('/empty') do
   slim(:empty)
 end
 
+# Route for creating new user, if user is the same or blank, redirects to error page, else confirms registration
+#
+# @param [String] username, The new username entered by the user
+# @param [String] password, The new password entered by the user
+# @param [String] password_confirm, The confirmation of the password entered by the user
 post('/users/new') do
   username = params[:username]
   password = params[:password]
@@ -119,12 +142,19 @@ post('/users/new') do
   register_user(username, password, password_confirm)
 end
 
+# Displays a form to add new movie
 get('/filly/new') do
   genres = get_genres()
-
   slim(:"filly/new", locals: { genres: genres })
 end
 
+# Route for creating new movie
+#
+# @param [String] title, The title of the new movie
+# @param [String] director, The director of the new movie
+# @param [String] genre, The genre of the new movie
+# @param [String] type, The type of the new movie
+# @param [String] rating, The rating of the new movie
 post('/filly') do
   title = params[:title]
   director = params[:director]
@@ -141,6 +171,8 @@ post('/filly') do
   redirect('/filly/new')
 end
 
+# Route for deleting movies, if authenticated, lets user delete movie 
+# @param [String], movie_id, The ID of the movie to be deleted
 post('/filly/:movies/delete') do
   movie_id = params[:movies]
 
@@ -151,6 +183,13 @@ post('/filly/:movies/delete') do
   redirect('/filly')
 end
 
+# Route for updating movie, if authenticated, lets the user update the movie
+# @param [Integer] movie_id, The ID of the movie to be updated
+# @param [String] title, The new title of the movie
+# @param [String] director, The new director of the movie
+# @param [String] genre, The new genre of the movie
+# @param [String] type, The new type of the movie
+# @param [String] rating, The new rating of the movie
 post('/filly/:movies/update') do
   movie_id = params[:movies].to_i
   title = params[:title]
@@ -172,6 +211,9 @@ post('/filly/:movies/update') do
   redirect('/filly')
 end
 
+# Displays the edited movie
+#
+# @param [Integer] id, The ID of the movie to be edited
 get('/filly/:movies/edit') do
   id = params[:movies].to_i
   genres = get_genres()
