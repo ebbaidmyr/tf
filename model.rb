@@ -95,11 +95,11 @@ module Model
         end
     end
 
+
+
     def get_movie(movie_id)
         db = connect_to_db()
         result = db.execute("SELECT * FROM movies WHERE id = ?", movie_id).first
-
         return result
     end
-
 end

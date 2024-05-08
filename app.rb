@@ -175,7 +175,6 @@ end
 get('/filly/:movies/edit') do
   id = params[:movies].to_i
   genres = get_genres()
-
   result = get_movie(id)
   slim(:"/filly/edit", locals: { result: result, genres: genres })
 end
