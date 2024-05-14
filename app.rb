@@ -60,6 +60,8 @@ end
 #
 # @param [String] username, The username entered by the user
 # @param [String] password, The password entered by the user
+# @see Model#find_user
+# @see Model#authenticate_user
 post('/login') do
   username = params[:username]
   password = params[:password]
@@ -93,6 +95,8 @@ end
 # Route for creating new genre, if admin redirects to admin page, else redirects to /showlogin
 #
 # @param [String] genre, The new name of the genre
+# @see Model#authenticate_admin
+# @see Model#create_new_genre
 post('/genre/new') do
     if authenticate_admin(session[:username])
       genre = params[:genre]
@@ -126,6 +130,8 @@ end
 # @param [String] username, The new username entered by the user
 # @param [String] password, The new password entered by the user
 # @param [String] password_confirm, The confirmation of the password entered by the user
+# @see Model#user_taken
+# @see Model#register_user
 post('/users/new') do
   username = params[:username]
   password = params[:password]
@@ -143,6 +149,7 @@ post('/users/new') do
 end
 
 # Displays a form to add new movie
+# @see Model#get_genres
 get('/filly/new') do
   genres = get_genres()
   slim(:"filly/new", locals: { genres: genres })
@@ -155,6 +162,7 @@ end
 # @param [String] genre, The genre of the new movie
 # @param [String] type, The type of the new movie
 # @param [String] rating, The rating of the new movie
+# @see Model#create_movie
 post('/filly') do
   title = params[:title]
   director = params[:director]
@@ -173,6 +181,8 @@ end
 
 # Route for deleting movies, if authenticated, lets user delete movie 
 # @param [String], movie_id, The ID of the movie to be deleted
+# @see Model#authenticate_movie
+# @see Model#delete_movie
 post('/filly/:movies/delete') do
   movie_id = params[:movies]
 
@@ -190,6 +200,9 @@ end
 # @param [String] genre, The new genre of the movie
 # @param [String] type, The new type of the movie
 # @param [String] rating, The new rating of the movie
+# @see Model#create_movie
+# @see Model#authenticate_movie
+# @see Model#update_movie
 post('/filly/:movies/update') do
   movie_id = params[:movies].to_i
   title = params[:title]
