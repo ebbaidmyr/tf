@@ -227,6 +227,8 @@ end
 # Displays the edited movie
 #
 # @param [Integer] id, The ID of the movie to be edited
+# @see Model#get_genres
+# @see Model#get_movie
 get('/filly/:movies/edit') do
   id = params[:movies].to_i
   genres = get_genres()
